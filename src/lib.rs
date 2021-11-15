@@ -18,6 +18,8 @@ fn calculate(nterms: u64) -> PyResult<f64> {
     Ok(pi)
 }
 
+
+
 #[pyfunction]
 fn getexif(bts: &[u8]) -> PyResult<()> {
     let res = read_bytes(bts);
