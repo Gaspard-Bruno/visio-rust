@@ -1,24 +1,6 @@
-use exif::Reader;
 use pyo3::prelude::*;
-use std::fs::File;
-use std::io::{BufReader, Cursor, Read, Write};
-
-#[pyfunction]
-fn calculate(nterms: u64) -> PyResult<f64> {
-    let numerator = 4.0;
-    let mut denominator = 1.0;
-    let mut operation = 1.0;
-    let mut pi = 0.0;
-
-    for _ in 0..nterms {
-        pi += operation * (numerator / denominator);
-        denominator += 2.0;
-        operation *= -1.0;
-    }
-    Ok(pi)
-}
-
-
+use pyo3::types::{PyBytes, PyDict};
+use std::io::Cursor;
 
 #[pyfunction]
 fn getexif(bts: &[u8]) -> PyResult<()> {
@@ -37,16 +19,28 @@ fn getexif(bts: &[u8]) -> PyResult<()> {
     Ok(())
 }
 
-#[pymodule]
-fn calculate_pi(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(calculate, m)?)?;
-    m.add_function(wrap_pyfunction!(getexif, m)?)?;
-    Ok(())
+
+fn read_metadata(bytes: &PyBytes) -> () {
+    // TODO read metadata to return a dictionary
+    
 }
+
+fn write_metadata(dict: PyDict, bytes: &PyBytes) -> () {
+    // TODO write metadata and bytes to return bytes
+}
+
 
 fn read_bytes(b: &[u8]) -> Result<exif::Exif, exif::Error> {
     let mut x = Cursor::new(b);
     let exif = exif::Reader::new().read_from_container(&mut x)?;
 
     Ok(exif)
+}
+
+
+#[pymodule]
+fn visio_exif(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(getexif, m)?)?;
+
+    Ok(())
 }
