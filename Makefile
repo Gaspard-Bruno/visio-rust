@@ -1,16 +1,37 @@
+SHELL := /bin/bash
+
+ts := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+
 .PHONY: help
-help: ## Show this help
-	@egrep -h '\s##\s' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+help: ## This help message
+	@echo "install maturin package first, pip install maturin"
+	@echo -e "$$(grep -hE '^\S+:.*##' $(MAKEFILE_LIST) | sed -e 's/:.*##\s*/:/' -e 's/^\(.\+\):\(.*\)/\\x1b[36m\1\\x1b[m:\2/' | column -c2 -t -s :)"
 
 .PHONY: build
-setup:	## Build cargo
-	pip install maturin
+build: nightly dev-packages ## Builds Rust code and visio-exif Python modules
+	maturin build
 
-.PHONY: build
-build-cargo:	## Build cargo
-	cargo build --release
+.PHONY: build-release
+build-release: nightly dev-packages ## Build visio-exif module in release mode
+	maturin build --release
 
+.PHONY: nightly
+nightly: ## Set rust compiler to nightly version
+	rustup override set nightly
 
-.PHONY: run
-run:	## Run project 
-	cargo run --release
+.PHONY: install
+install: nightly dev-packages ## Install visio-exif module into current virtualenv
+	maturin develop --release
+
+# .PHONY: publish
+# publish: ## Publish crate on Pypi
+# 	maturin publish
+
+.PHONY: clean
+clean: ## Clean up build artifacts
+	cargo clean
+
+.PHONY: cargo-test
+cargo-test: ## Run cargo tests only
+	cargo test
+
