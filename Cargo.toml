@@ -15,3 +15,10 @@ features = ["extension-module"]
 
 [dependencies]
 kamadak-exif = "0.5.4"
+
+[profile.release]
+codegen-units = 1
+debug = false
+incremental = false
+lto = true
+opt-level = 3
