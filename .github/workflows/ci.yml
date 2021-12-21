@@ -1,144 +1,241 @@
-name: CI
+name: Release
 
 on:
-  release:
-    types: [created]
   push:
-    branches: [ master ]
-
+    tags: [ 'v*' ]
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v1
-
-      - name: Install latest  stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-
-      - name: Lint with rustfmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-
-      - name: Lint with clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all-targets --all-features
-
-      - name: Test with cargo
-        uses: actions-rs/cargo@v1.0.1
-        with:
-          command: test
-          toolchain: stable
-
-  build:
-    runs-on: ${{ matrix.os }}
-    needs: lint
+  release-build:
+    name: Release build
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
-        os: [ubuntu-latest]
-        # os: [ubuntu-latest, macos-latest, windows-latest]
-
+        target:
+          - x86_64-unknown-linux-musl
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-msvc
+          - i686-pc-windows-msvc
+          - aarch64-pc-windows-msvc
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            name: maturin-x86_64-unknown-linux-musl.tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            name: maturin-x86_64-apple-darwin.tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: maturin-x86_64-pc-windows-msvc.zip
+          - target: i686-pc-windows-msvc
+            os: windows-latest
+            name: maturin-i686-pc-windows-msvc.zip
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            name: maturin-aarch64-pc-windows-msvc.zip
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v1
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+      # Largely inspired by https://github.com/starship/starship/blob/35a0a20f5c4fea6a08e1b91ff631b089eef8fc50/.github/workflows/deploy.yml
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
         with:
-          python-version: ${{ matrix.python-version }}
-      - uses: syphar/restore-virtualenv@v1
-        id: cache-virtualenv
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-
-      - name: Install package deps
-        run: | 
-          pip install -r requirements.txt --no-cache-dir
-
-      - name: Install latest stable
-        uses: actions-rs/toolchain@v1
-        with:
+          profile: minimal
           toolchain: stable
           override: true
+          target: ${{ matrix.target }}
 
-      - name: Build Python package
-        run:  maturin develop --release
+      - name: Install musl tools
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install -y musl-tools
 
-  # python-publish:
-  #   needs: build
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       python-version: [3.5, 3.6, 3.7, 3.8, 3.9]
-  #       os: [ubuntu-latest, macos-latest, windows-latest]
-  #       exclude:
-  #         # There is a known issue where Python C extensions
-  #         # can not be built on Python 3.5 on Windows.
-  #         # https://github.com/actions/virtual-environments/issues/34
-  #         # Therefore, ujson can't be compiled and the build would fail.
-  #         - os: windows-latest
-  #           python-version: 3.5
-  #   steps:
-  #     - uses: actions/checkout@v1
+      # Install gnu-tar because BSD tar is buggy
+      # https://github.com/actions/cache/issues/403
+      - name: Install GNU tar (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install gnu-tar
+          echo "/usr/local/opt/gnu-tar/libexec/gnubin" >> $GITHUB_PATH
+      # Those two will also create target/${{ matrix.target }}/maturin
+      - name: Build wheel (with sdist)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          # manylinux
+          cargo run -- build --release -b bin -o dist --target ${{ matrix.target }} --cargo-extra-args="--features password-storage"
+          # musllinux
+          cargo run -- build --release -b bin -o dist --target ${{ matrix.target }} --cargo-extra-args="--features password-storage" --no-sdist --compatibility musllinux_1_1
+      # ring doesn't support aarch64 windows yet
+      - name: Build wheel (windows aarch64)
+        if: matrix.target == 'aarch64-pc-windows-msvc'
+        run: cargo run -- build --release -b bin -o dist --target ${{ matrix.target }} --no-sdist --cargo-extra-args="--no-default-features" --cargo-extra-args="--features log,upload,human-panic"
 
-  #     - uses: actions/setup-python@v1
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
+      - name: Build wheel (without sdist)
+        if: ${{ matrix.target != 'x86_64-unknown-linux-musl' && matrix.target != 'aarch64-pc-windows-msvc' }}
+        run: cargo run -- build --release -b bin -o dist --target ${{ matrix.target }} --no-sdist --cargo-extra-args="--features password-storage"
 
-  #     - name: Install latest stable
-  #       uses: actions-rs/toolchain@v1
-  #       with:
-  #         toolchain: stable
-  #         override: true
+      - name: Build wheel (macOS universal2)
+        if: matrix.target == 'x86_64-apple-darwin'
+        env:
+          DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+          MACOSX_DEPLOYMENT_TARGET: '10.9'
+        run: |
+          # set SDKROOT for C dependencies like ring and bzip2
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+          rustup target add aarch64-apple-darwin
+          cargo run -- build --release -b bin -o dist --no-sdist --universal2 --cargo-extra-args="--features password-storage"
+      - name: Archive binary (windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          7z a ../../../${{ matrix.name }} ${{ github.event.repository.name }}.exe
+          cd -
+      - name: Archive binary (linux and macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czvf ../../../${{ matrix.name }} ${{ github.event.repository.name }}
+          cd -
+      - name: Archive binary (macOS aarch64)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd target/aarch64-apple-darwin/release
+          tar czvf ../../../maturin-aarch64-apple-darwin.tar.gz ${{ github.event.repository.name }}
+          cd -
+      - name: Build debian package
+        if: ${{ matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          BINARY_NAME: ${{ github.event.repository.name }}
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ github.ref }}
+        run: ci/build_deb.sh
 
-  #     - name: Install dependencies
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         pip install -r requirements.txt --no-cache-dir
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
 
-  #     - name: Build Python package
-  #       run: maturin build --release --no-sdist --strip --interpreter pyhon${{matrix.python_version}}
+      - name: Upload binary artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: binaries
+          path: |
+            *.tar.gz
+            *.zip
+            *.deb
+  release-musl:
+    name: Release musl build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [
+          { target: "aarch64-unknown-linux-musl", image_tag: "aarch64-musl", manylinux: "2014" },
+          { target: "armv7-unknown-linux-musleabihf", image_tag: "armv7-musleabihf", manylinux: "2014"},
+          { target: "i686-unknown-linux-musl", image_tag: "i686-musl", manylinux: "2010"},
+        ]
+    container:
+      image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
+      env:
+        RUSTUP_HOME: /root/.rustup
+        CARGO_HOME: /root/.cargo
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build wheel
+        run: |
+          sudo python3 -m pip install maturin
+          # manylinux
+          maturin build --release -b bin -o dist --no-sdist \
+            --target ${{ matrix.platform.target }} \
+            --manylinux ${{ matrix.platform.manylinux }} \
+            --cargo-extra-args="--features password-storage"
+          # musllinux
+          maturin build --release -b bin -o dist --no-sdist \
+            --target ${{ matrix.platform.target }} \
+            --compatibility musllinux_1_1 \
+            --cargo-extra-args="--features password-storage"
+      - name: Archive binary
+        run: tar czvf target/release/maturin-${{ matrix.platform.target }}.tar.gz -C target/${{ matrix.platform.target }}/release maturin
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
+      - name: Upload binary artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: binaries
+          path: target/release/maturin-${{ matrix.platform.target }}.tar.gz
 
-  #     - name: List wheels
-  #       if: matrix.os == 'windows-latest'
-  #       run: dir target\wheels\
+  release-no-rustls:
+    name: Release build without rustls
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - target: "powerpc64le-unknown-linux-musl"
+            image: "messense/rust-musl-cross:powerpc64le-musl"
+            manylinux: "2014"
+            musllinux: "musllinux_1_1"
+          - target: "s390x-unknown-linux-gnu"
+            image: "messense/manylinux2014-cross:s390x"
+            manylinux: "2014"
+            musllinux: ""
+    container:
+      image: docker://${{ matrix.platform.image }}
+    steps:
+      - uses: actions/checkout@v2
+      # powerpc64le-unknown-linux-musl doesn't have official std library release
+      - uses: actions-rs/toolchain@v1
+        if: matrix.platform.target == 's390x-unknown-linux-gnu'
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: ${{ matrix.platform.target }}
+      - name: Build manylinux wheel
+        run: |
+          sudo python3 -m pip install maturin
+          maturin build --release -b bin -o dist --no-sdist \
+            --target ${{ matrix.platform.target }} \
+            --manylinux ${{ matrix.platform.manylinux }} \
+            --cargo-extra-args="--no-default-features" \
+            --cargo-extra-args="--features log,upload,human-panic,password-storage"
+      - name: Build musllinux wheel
+        if: matrix.platform.musllinux != ''
+        run: |
+          maturin build --release -b bin -o dist --no-sdist \
+            --target ${{ matrix.platform.target }} \
+            --compatibility ${{ matrix.platform.musllinux }} \
+            --cargo-extra-args="--no-default-features" \
+            --cargo-extra-args="--features log,upload,human-panic,password-storage"
+      - name: Archive binary
+        run: tar czvf target/release/maturin-${{ matrix.platform.target }}.tar.gz -C target/${{ matrix.platform.target }}/release maturin
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
+      - name: Upload binary artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: binaries
+          path: target/release/maturin-${{ matrix.platform.target }}.tar.gz
 
-  #     - name: List wheels
-  #       if:  matrix.os != 'windows-latest'
-  #       run: find ./target/wheels/
-
-  #     # Note: Windows doesn't support glob
-  #     # https://stackoverflow.com/a/52481267/270334
-  #     - name: Install wheels
-  #       if:  matrix.os == 'windows-latest'
-  #       run: pip install --find-links=target\wheels visio_exif
-  #     - name: Install wheels
-  #       if:  matrix.os != 'windows-latest'
-  #       run: pip install target/wheels/visio_exif*.whl
-
-      # - name: Release
-      #   uses: softprops/action-gh-release@v1
-      #   if: startsWith(github.ref, 'refs/tags/')
-      #   with:
-      #     files: target/wheels/visio_exif*.whl
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # - name: PyPi publish
-      #   if: github.event_name == 'release' && github.event.action == 'created'
-      #   env:
-      #     MATURIN_PASSWORD: ${{ secrets.PYPI }}
-      #   run: maturin publish --username __token__t
+  
+  release-github:
+    name: Publish to GitHub releases
+    runs-on: ubuntu-latest
+    if: "startsWith(github.ref, 'refs/tags/')"
+    needs: [ release-build, release-musl, release-no-rustls ]
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: binaries
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            *.tar.gz
+            *.zip
+            *.deb
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
