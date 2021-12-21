@@ -1,52 +1,47 @@
-// use pyo3::prelude::*;
-// use pyo3::types::{PyByteArray, PyDict};
-// use std::io::Cursor;
+use pyo3::prelude::*;
+use std::collections::HashMap;
 
-// use img_parts::{Bytes, DynImage, ImageEXIF, ImageICC};
+use img_parts::{Bytes, DynImage, ImageEXIF, ImageICC};
 
-// /// get exif, icc profile from file bytes
-// #[pyfunction]
-// #[pyo3(text_signature = "(fields, bytes, /)")]
-// fn get_metadata_from_bytes(file_bytes: &[u8]) -> () {
-//     //visio_exif.get_metadata_from_bytes(bytes) -> (exif, iccprofile)
+#[pyfunction]
+#[pyo3(text_signature = "(buf, icc_profile, exif_data, /)")]
+pub fn import_metadata(buf: Vec<u8>, icc_profile: Vec<u8>, exif_data: Vec<u8>) -> Vec<u8> {
+    let original_image = buf.clone();
+    let iccp = Bytes::from(icc_profile);
+    let exif = Bytes::from(exif_data);
 
-//     let (iccp, exif) = DynImage::from_bytes(file_bytes.clone().into())
-//         .expect("image loaded")
-//         .map_or((None, None), |dimg| (dimg.icc_profile(), dimg.exif()));
+    match DynImage::from_bytes(buf.into()).expect("image loaded")  {
+        Some(img) => {
+            let mut out = img;
+            out.set_icc_profile(iccp.into());
+            out.set_exif(exif.into());
+            out.encoder().bytes().to_vec()
+          
+        },
+        _ => original_image
+        
+    }
 
-//     ()
-// }
-// /// get exif, icc profile from file path
-// #[pyfunction]
-// #[pyo3(text_signature = "(fields, bytes, /)")]
-// fn get_metadata_from_path(file_path: &str) -> (&PyDict, &PyDict) {
-//     // visio_exif.get_metadata_from_path(path) -> (exif, iccprofile)
+}
 
-//     todo!("get exif, icc profile from file path");
-// }
+#[pyfunction]
+#[pyo3(text_signature = "(buf, /)")]
+pub fn export_metadata(buf: Vec<u8>) -> HashMap<&'static str, Vec<u8>> {
+    // extract ICC and EXIF metadata
+    let (iccp, exif) = DynImage::from_bytes(buf.into())
+        .expect("image loaded")
+        .map_or((None, None), |dimg| (dimg.icc_profile(), dimg.exif()));
 
-// /// set exif, icc
-// #[pyfunction]
-// #[pyo3(text_signature = "(fields, bytes, /)")]
-// fn set_metadata_from_bytes(file_bytes: &[u8], meta_data: (&PyDict, &PyDict)) -> Vec<u8> {
-//     // visio_exif.set_metadata_from_bytes(bytes, (exif, iccprofile)) -> bytes
+    let icc_profile = iccp.unwrap_or(Bytes::new()).to_vec();
+    let exif_data = exif.unwrap_or(Bytes::new()).to_vec();
+    let metadata = HashMap::from([("ICC_PROFILE", icc_profile), ("EXIF_DATA", exif_data)]);
+    metadata
+}
 
-//     todo!("set exif, icc");
-// }
-// /// set exif, icc
-// #[pyfunction]
-// #[pyo3(text_signature = "(fields, bytes, /)")]
-// fn set_metadata_from_path(file_path: &[u8], meta_data: (&PyDict, &PyDict)) -> Vec<u8> {
-//     // visio_exif.ser_metadata_from_path(path, (exif, iccprofile))  -> bytes
-
-//     todo!("set exif, icc");
-// }
-
-// #[pymodule]
-// fn visio_exif(_py: Python, m: &PyModule) -> PyResult<()> {
-//     m.add_function(wrap_pyfunction!(get_metadata_from_bytes, m)?)?;
-//     m.add_function(wrap_pyfunction!(get_metadata_from_path, m)?)?;
-//     m.add_function(wrap_pyfunction!(set_metadata_from_bytes, m)?)?;
-//     m.add_function(wrap_pyfunction!(set_metadata_from_path, m)?)?;
-//     Ok(())
-// }
+#[pymodule]
+#[pyo3(name = "visio_img_meta")]
+fn visio_exif(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(import_metadata, m)?)?;
+    m.add_function(wrap_pyfunction!(export_metadata, m)?)?;
+    Ok(())
+}
