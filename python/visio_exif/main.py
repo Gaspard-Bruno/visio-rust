@@ -1,8 +1,8 @@
-import visio_exif
+import visio_img_meta
 
 
 # with open('3Y7H3092.CR2', 'rb') as f:
-with open('aa.jpg', 'rb') as f:
+with open('ab.jpg', 'rb') as f:
     b = f.read()
-    exif = visio_exif.getexif(b)
+    exif = visio_img_meta.export_metadata(b)
     print(exif)
