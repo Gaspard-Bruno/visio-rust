@@ -15,7 +15,6 @@ features = ["extension-module"]
 img-parts = "0.2.3"
 bytes = "1"
 image = { version = "0.23", default-features = false, features = ["jpeg", "png", "webp"] }
-base64 = "0.13.0"
 
 [profile.release]
 codegen-units = 1
