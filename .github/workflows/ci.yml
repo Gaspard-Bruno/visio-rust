@@ -4,7 +4,7 @@ on:
   release:
     types: [created]
   push:
-    branches: [ develop, ci ]
+    tags: [ 'v*' ]
 
 
 jobs:
