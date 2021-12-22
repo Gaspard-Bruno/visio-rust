@@ -103,7 +103,7 @@ jobs:
           pip install -r requirements.txt --no-cache-dir
 
       - name: Build Python package
-        run: maturin build --release --no-sdist --strip --interpreter pyhon${{matrix.python_version}}
+        run: maturin build --release --no-sdist --strip --interpreter python${{matrix.python_version}}
 
       - name: List wheels
         if: matrix.os == 'windows-latest'
