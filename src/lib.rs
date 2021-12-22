@@ -32,10 +32,10 @@ pub fn export_metadata(buf: Vec<u8>) -> HashMap<&'static str, Vec<u8>> {
         .expect("image loaded")
         .map_or((None, None), |dimg| (dimg.icc_profile(), dimg.exif()));
 
-    let icc_profile = iccp.unwrap_or(Bytes::new()).to_vec();
-    let exif_data = exif.unwrap_or(Bytes::new()).to_vec();
-    let metadata = HashMap::from([("ICC_PROFILE", icc_profile), ("EXIF_DATA", exif_data)]);
-    metadata
+    let icc_profile = iccp.unwrap_or_default().to_vec();
+    let exif_data = exif.unwrap_or_default().to_vec();
+    HashMap::from([("ICC_PROFILE", icc_profile), ("EXIF_DATA", exif_data)])
+    
 }
 
 #[pymodule]
