@@ -1,41 +1,32 @@
 use pyo3::prelude::*;
-use std::collections::HashMap;
-
+use base64::encode;
 use img_parts::{Bytes, DynImage, ImageEXIF, ImageICC};
 
 #[pyfunction]
 #[pyo3(text_signature = "(buf, icc_profile, exif_data, /)")]
-pub fn import_metadata(buf: Vec<u8>, icc_profile: Vec<u8>, exif_data: Vec<u8>) -> Vec<u8> {
-    let original_image = buf.clone();
-    let iccp = Bytes::from(icc_profile);
-    let exif = Bytes::from(exif_data);
-
-    match DynImage::from_bytes(buf.into()).expect("image loaded")  {
-        Some(img) => {
-            let mut out = img;
-            out.set_icc_profile(iccp.into());
-            out.set_exif(exif.into());
-            out.encoder().bytes().to_vec()
-          
+pub fn import_metadata(buf:Vec<u8>, icc_profile: Vec<u8>, exif_data: Vec<u8>) -> String {
+    match DynImage::from_bytes(buf.clone().into()).unwrap() {
+        Some(mut img) => {
+            img.set_icc_profile(Bytes::from(icc_profile).into());
+            img.set_exif(Bytes::from(exif_data).into());
+            encode(img.encoder().bytes().to_vec()) 
         },
-        _ => original_image
-        
+        None => encode(buf)
     }
-
 }
 
 #[pyfunction]
 #[pyo3(text_signature = "(buf, /)")]
-pub fn export_metadata(buf: Vec<u8>) -> HashMap<&'static str, Vec<u8>> {
-    // extract ICC and EXIF metadata
-    let (iccp, exif) = DynImage::from_bytes(buf.into())
-        .expect("image loaded")
-        .map_or((None, None), |dimg| (dimg.icc_profile(), dimg.exif()));
+pub fn export_metadata(buf: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
 
-    let icc_profile = iccp.unwrap_or(Bytes::new()).to_vec();
-    let exif_data = exif.unwrap_or(Bytes::new()).to_vec();
-    let metadata = HashMap::from([("ICC_PROFILE", icc_profile), ("EXIF_DATA", exif_data)]);
-    metadata
+    match DynImage::from_bytes(buf.into()).unwrap() {
+        Some(img) => { 
+            let icc_profile = img.icc_profile().unwrap_or(Bytes::new()).to_vec();
+            let exif_data = img.exif().unwrap_or(Bytes::new()).to_vec();
+            (icc_profile, exif_data)
+        },
+        None => (vec![], vec![])
+    }
 }
 
 #[pymodule]
