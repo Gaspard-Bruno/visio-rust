@@ -9,3 +9,11 @@ Cargo.lock
 *.pdb
 
 .venv/
+
+venv/
+
+.devcontainer/
+
+.DS_Store
+
+__pycache__/
