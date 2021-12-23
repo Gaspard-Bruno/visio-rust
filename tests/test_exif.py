@@ -4,7 +4,7 @@ import os
 from io import BytesIO
 
 
-def test_extract_icc_set_metadata():
+def test_extract_exif_set_metadata():
     with open("tests/images/22-canon_tags.jpeg", "rb") as f:
         with open("tests/images/P1133897.jpg", "rb") as icc_file:
 
@@ -16,12 +16,12 @@ def test_extract_icc_set_metadata():
             output_data = set_metadata(x.getbuffer(), icc_profile, exif_data)
             icc_profile1, exif_data1 = get_metadata(output_data)
 
-            assert md5_checksum(bytes(icc_profile1)) == md5_checksum(bytes(icc_profile))
+            assert md5_checksum(bytes(exif_data1)) == md5_checksum(bytes(exif_data))
 
 
-def test_extract_icc():
+def test_extract_exif():
     with open("tests/images/P1133897_AdobeRGB.jpeg", "rb") as f:
 
         icc_profile, exif_data = get_metadata(f.read())
 
-        assert icc_profile
+        assert exif_data

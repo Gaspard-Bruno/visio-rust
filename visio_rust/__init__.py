@@ -1,1 +1,1 @@
-from . import *
+from .visio_rust import *
