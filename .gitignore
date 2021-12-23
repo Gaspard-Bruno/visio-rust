@@ -17,3 +17,7 @@ venv/
 .DS_Store
 
 __pycache__/
+*.so
+dist/
+visio_rust.egg-info
+build/
