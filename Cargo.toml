@@ -1,11 +1,15 @@
 [package]
-name = "visio_image_meta"
+name = "visio_rust"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "visio_img_meta"
+name = "visio_rust"
 crate-type = ["cdylib"]
+
+exclude = [
+    "tests/",
+]
 
 [dependencies.pyo3]
 version = "0.15.0"
