@@ -30,7 +30,7 @@ pub fn get_metadata(buf: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
 
 #[pymodule]
 #[pyo3(name = "visio_rust")]
-fn visio_exif(_py: Python, m: &PyModule) -> PyResult<()> {
+fn visio_rust(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(set_metadata, m)?)?;
     m.add_function(wrap_pyfunction!(get_metadata, m)?)?;
     Ok(())
