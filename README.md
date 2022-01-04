@@ -1,5 +1,26 @@
+# Visio-Rust
 
+This project aims to compile computer vision libs writen in rust into python bindings.
 
+### Clone the project
+* HTTP
+  ```bash
+  git clone https://github.com/Gaspard-Bruno/visio-rust.git
+  ```
+* SSH
+  ```bash
+  git clone git@github.com:Gaspard-Bruno/visio-rust.git
+  ```
+
+## Installation
+```
+cd visio-rust/ && make install
+```
+
+## Testing
+```
+cd visio-rust/ && tox
+```
 ## Usage
 
 ```python
@@ -15,33 +36,6 @@ with open('xxxx.jpeg', 'rb') as f:
 
 ```
 
-
-# Build Steps development
-### Build
-```
-make build
-```
-
-### install maturin
-```
-pip install maturin
-```
-
-### test python package
-```
-maturin develop
-```
-
-### build python package
-```
-maturin build
-
-```
-
-## Testing
-
-To test install tox globally and run
-
-```shell
-tox -e py
-```
+## 🚀 Author
+- [@AndersonCancado](https://www.github.com/andycancado)
+- [@MarcoJoao](https://www.github.com/marcojoao)

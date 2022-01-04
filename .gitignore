@@ -7,7 +7,7 @@ Cargo.lock
 **/*.rs.bk
 
 *.pdb
-
+.tox/
 .venv/
 
 venv/
@@ -19,5 +19,9 @@ venv/
 __pycache__/
 *.so
 dist/
-visio_rust.egg-info
+visio_rust.egg-info/
 build/
+
+.vscode/
+.pytest_cache/
+.cargo/

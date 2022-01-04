@@ -1,23 +1,20 @@
 from visio_rust import get_metadata, set_metadata
 from utils import md5_checksum
 
-def test_extract_icc_set_metadata():
-    with open("./images/lux_iccprofile_test.png", "rb") as input_bytes:
-        with open("./images/lux_iccprofile_test_2.jpg", "rb") as input_2_bytes:
-            with open("./images/lux_iccprofile_test_output.png", "wb") as output_bytes:
-                input_data = input_bytes.read()
-                input_2_data = input_2_bytes.read()
-                
-                icc_profile, _ = get_metadata(input_data)
-                output_data = bytes(set_metadata(input_2_data, icc_profile, []))
-                icc_profile1, _ = get_metadata(output_data)
-                output_bytes.write(output_data)
-                
-                assert md5_checksum(bytes(icc_profile)) == md5_checksum(bytes(icc_profile1))
-                
 def test_extract_icc():
     with open("tests/images/P1133897_AdobeRGB.jpeg", "rb") as f:
-
         icc_profile, _ = get_metadata(f.read())
-
         assert icc_profile
+
+
+def test_extract_icc_set_metadata():
+    with open("tests/images/P1133897_AdobeRGB.jpeg", "rb") as bts_0:
+        with open("tests/images/22-canon_tags.jpeg", "rb") as bts_1:
+            data_0 = bts_0.read()
+            icc_profile_0, _ = get_metadata(data_0)
+            
+            data_1 = bts_1.read()
+            data_1 = bytes(set_metadata(data_1, icc_profile_0, []))
+            icc_profile_1, _ = get_metadata(data_1)
+
+            assert md5_checksum(bytes(icc_profile_0)) == md5_checksum(bytes(icc_profile_1))
