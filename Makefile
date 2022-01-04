@@ -8,7 +8,7 @@ help: ## This help message
 
 .PHONY: install
 install: ## Install visio-rust module into current virtualenv
-	pip install -r requirements-dev.txt
+	pip install -r requirements.txt
 	maturin develop --release
 
 .PHONY: clean
