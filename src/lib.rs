@@ -1,54 +1,37 @@
+use img_parts::{Bytes, DynImage, ImageEXIF, ImageICC};
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict};
-use std::collections::HashMap;
-use std::io::Cursor;
 
-/// Get exif dictionary from image file
 #[pyfunction]
-#[pyo3(text_signature = "(bytes, /)")]
-fn getexif(bytes: &[u8]) -> PyResult<HashMap<String, String>> {
-    let res = read_bytes_from_container(bytes);
-    let mut exif = HashMap::new();
-    match res {
-        Ok(r) => {
-            for f in r.fields() {
-                exif.insert(f.tag.to_string(), f.display_value().to_string());
-            }
+#[pyo3(text_signature = "(buf, icc_profile, exif_data, /)")]
+pub fn set_metadata(buf: Vec<u8>, icc_profile: Vec<u8>, _exif_data: Vec<u8>) -> Vec<u8> {
+    match DynImage::from_bytes(buf.clone().into()).unwrap() {
+        Some(mut img) => {
+            //img.set_exif(Bytes::from(exif_data).into());
+            img.set_icc_profile(Bytes::from(icc_profile).into());
+            img.encoder().bytes().to_vec()
         }
-        Err(e) => {
-            println!("ERROR {}", e);
-            ()
-        }
+        None => buf,
     }
-    Ok(exif)
 }
 
-/// Read read_metadata from exif bytes
 #[pyfunction]
-#[pyo3(text_signature = "(bytes, /)")]
-fn read_metadata(_bytes: &PyBytes) -> () {
-    todo!("read metadata to return a dictionary");
-}
-
-/// Write exif bytes from dictionary
-#[pyfunction]
-#[pyo3(text_signature = "(fields, bytes, /)")]
-fn write_metadata(_fields: &PyDict, _bytes: &PyBytes) -> () {
-    todo!("write metadata and bytes to return bytes");
-}
-
-/// Read bytes from container
-fn read_bytes_from_container(b: &[u8]) -> Result<exif::Exif, exif::Error> {
-    let mut x = Cursor::new(b);
-    let exif = exif::Reader::new().read_from_container(&mut x)?;
-
-    Ok(exif)
+#[pyo3(text_signature = "(buf, /)")]
+pub fn get_metadata(buf: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
+    match DynImage::from_bytes(buf.into()).unwrap() {
+        Some(img) => {
+            
+            let icc_profile = img.icc_profile().unwrap_or_default().to_vec();
+            let exif_data = img.exif().unwrap_or_default().to_vec();
+            (icc_profile, exif_data)
+        }
+        None => (vec![], vec![]),
+    }
 }
 
 #[pymodule]
-fn visio_exif(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(getexif, m)?)?;
-    m.add_function(wrap_pyfunction!(read_metadata, m)?)?;
-    m.add_function(wrap_pyfunction!(write_metadata, m)?)?;
+#[pyo3(name = "visio_rust")]
+fn visio_rust(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(set_metadata, m)?)?;
+    m.add_function(wrap_pyfunction!(get_metadata, m)?)?;
     Ok(())
 }
