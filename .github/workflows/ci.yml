@@ -129,3 +129,7 @@ jobs:
           files: target/wheels/visio_image_meta*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+      - name: PyPi publish
+        env:
+          MATURIN_PASSWORD: ${{ secrets.PYPI }}
+        run: maturin publish -r https://test.pypi.org/legacy/. --username __token__t 
