@@ -132,4 +132,4 @@ jobs:
       - name: PyPi publish
         env:
           MATURIN_PASSWORD: ${{ secrets.PYPI }}
-        run: maturin publish -r https://test.pypi.org/legacy/. --username __token__ --interpreter python${{matrix.python_version}}
+        run: maturin publish -r https://test.pypi.org/legacy/. --username __token__ --interpreter python${{matrix.python_version}}  --skip-existing 
