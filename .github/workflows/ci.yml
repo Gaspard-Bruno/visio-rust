@@ -117,16 +117,16 @@ jobs:
       # https://stackoverflow.com/a/52481267/270334
       - name: Install wheels
         if:  matrix.os == 'windows-latest'
-        run: pip install --find-links=target\wheels visio_image_meta
+        run: pip install --find-links=target\wheels visio_rust
       - name: Install wheels
         if:  matrix.os != 'windows-latest'
-        run: pip install target/wheels/visio_image_meta*.whl
+        run: pip install target/wheels/visio_rust*.whl
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: target/wheels/visio_image_meta*.whl
+          files: target/wheels/visio_rust*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
       - name: PyPi publish
