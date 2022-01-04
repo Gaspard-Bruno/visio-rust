@@ -2,7 +2,7 @@ import toml
 from setuptools import setup
 from setuptools_rust import RustExtension
 
-with open("Readme.md", encoding="utf-8", errors="ignore") as fp:
+with open("README.md", encoding="utf-8", errors="ignore") as fp:
     long_description = fp.read()
 
 with open("Cargo.toml") as fp:
