@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "visio_rust"
-description = "Visio icc profile in Rust"
+description = "Rust plugin for python exif and icc profile manipulation"
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python",
