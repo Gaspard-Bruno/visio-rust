@@ -1,6 +1,6 @@
 [package]
 name = "visio_rust"
-version = "0.1.9"
+version = "0.1.11"
 edition = "2021"
 
 [lib]

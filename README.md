@@ -1,26 +1,7 @@
 # Visio-Rust
 
-This project aims to compile computer vision libs writen in rust into python bindings.
+This project aims to provide an api to retreive and add metadata to images, jpgs, webp and png is supported.
 
-### Clone the project
-* HTTP
-  ```bash
-  git clone https://github.com/Gaspard-Bruno/visio-rust.git
-  ```
-* SSH
-  ```bash
-  git clone git@github.com:Gaspard-Bruno/visio-rust.git
-  ```
-
-## Installation
-```
-cd visio-rust/ && make install
-```
-
-## Testing
-```
-cd visio-rust/ && tox
-```
 ## Usage
 
 ```python
@@ -34,6 +15,28 @@ with open('xxxx.jpeg', 'rb') as f:
 
     print(input_data == output_data)
 
+```
+<br/>
+
+# Development
+## Clone the project
+
+```bash
+git clone https://github.com/Gaspard-Bruno/visio-rust.git
+```
+
+```bash
+git clone git@github.com:Gaspard-Bruno/visio-rust.git
+```
+
+## Installation
+```
+cd visio-rust/ && make install
+```
+
+## Testing
+```
+cd visio-rust/ && tox
 ```
 
 ## 🚀 Author
