@@ -1,6 +1,6 @@
 [package]
 name = "visio_rust"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 
 [lib]
@@ -16,11 +16,12 @@ features = ["extension-module"]
 [dependencies]
 img-parts = "0.2.3"
 bytes = "1"
-image = { version = "0.23", default-features = false, features = [
+image = { version = "0.23.14", default-features = false, features = [
     "jpeg",
     "png",
     "webp",
 ] }
+
 
 [profile.release]
 codegen-units = 1
