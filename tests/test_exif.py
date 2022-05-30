@@ -19,7 +19,7 @@ def test_extract_exif_set_metadata():
             _, exif_data_1 = get_metadata(data_1)
             assert exif_data_1
             
-            assert md5_checksum(bytes(exif_data_0)) != md5_checksum(bytes(exif_data_1)) 
+            assert md5_checksum(bytes(exif_data_0)) != md5_checksum(bytes(exif_data_1))   # type: ignore
             
             # Image (B) no data
             data_1 = bytes(set_metadata(data_1, [], []))
@@ -30,4 +30,4 @@ def test_extract_exif_set_metadata():
             data_1 = bytes(set_metadata(data_1, [], exif_data_0))
             _, new_exif_data_1 = get_metadata(data_1)
             assert new_exif_data_1
-            assert md5_checksum(bytes(exif_data_0)) == md5_checksum(bytes(new_exif_data_1))   
+            assert md5_checksum(bytes(exif_data_0)) == md5_checksum(bytes(new_exif_data_1))    # type: ignore 
