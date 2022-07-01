@@ -3,10 +3,11 @@ use pyo3::prelude::*;
 
 #[pyfunction]
 #[pyo3(text_signature = "(buf, icc_profile, exif_data, /)")]
-pub fn set_metadata(buf: Vec<u8>, icc_profile: Vec<u8>, _exif_data: Vec<u8>) -> Vec<u8> {
+pub fn set_metadata(buf: Vec<u8>, icc_profile: Vec<u8>, exif_data: Vec<u8>) -> Vec<u8> {
     match DynImage::from_bytes(buf.clone().into()).unwrap() {
         Some(mut img) => {
-            //img.set_exif(Bytes::from(exif_data).into());
+            
+            img.set_exif(Bytes::from(exif_data).into());
             img.set_icc_profile(Bytes::from(icc_profile).into());
             img.encoder().bytes().to_vec()
         }

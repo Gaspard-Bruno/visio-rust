@@ -17,4 +17,4 @@ def test_extract_icc_set_metadata():
             data_1 = bytes(set_metadata(data_1, icc_profile_0, []))
             icc_profile_1, _ = get_metadata(data_1)
 
-            assert md5_checksum(bytes(icc_profile_0)) == md5_checksum(bytes(icc_profile_1))
+            assert md5_checksum(bytes(icc_profile_0)) == md5_checksum(bytes(icc_profile_1)  # type: ignore
